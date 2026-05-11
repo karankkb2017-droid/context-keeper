@@ -56,10 +56,17 @@ The app opens in your browser at `http://localhost:8501`.
 
 ```
 context-keeper/
-├── context_keeper.py      # Main Streamlit app
-├── requirements.txt       # Python dependencies
-├── handoff_history.json   # Auto-created: your saved handoffs
-└── README.md              # This file
+├── context_keeper.py          # Main Streamlit app (v1)
+├── requirements.txt           # Python dependencies
+├── handoff_history.json       # Auto-created: your saved handoffs
+├── README.md                  # This file
+└── extension/                 # Browser extension (v2)
+    ├── manifest.json
+    ├── popup.html / popup.js
+    ├── content.js
+    ├── background.js
+    ├── icons/
+    └── README_extension.md    # Extension setup guide
 ```
 
 ---
@@ -78,7 +85,7 @@ context-keeper/
 
 **v1 (current)** — Prompt generator with local history
 
-**v2** — Browser extension that auto-extracts conversations from LLM chat pages
+**v2 (available)** — Browser extension for one-click handoff injection → see [`extension/README_extension.md`](extension/README_extension.md)
 
 **v3** — Optional Gemini API integration for "rescue mode" (cleans up already-dead chat transcripts)
 
