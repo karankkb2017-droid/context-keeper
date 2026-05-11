@@ -2,3 +2,5 @@ handoff_history.json
 __pycache__/
 .venv/
 *.pyc
+.claude/
+files.zip

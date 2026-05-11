@@ -1,0 +1,179 @@
+Add a browser extension (v2) to the existing Context Keeper project in this folder. Do not touch or break context_keeper.py. Add the extension inside a new subfolder called "extension".
+
+═══════════════════════════════════════════
+WHAT THIS EXTENSION DOES
+═══════════════════════════════════════════
+
+The user is chatting on a free LLM platform (ChatGPT, Gemini, Claude, or Kimi) and approaching the token limit. They click the Context Keeper toolbar icon in their browser. A small popup appears. They pick their work category. They click one button. The extension automatically types the handoff prompt into the chat box AND submits it. The LLM then generates a structured handoff summary. The user copies that summary and pastes it into a new LLM chat to continue seamlessly.
+
+═══════════════════════════════════════════
+BROWSER SUPPORT
+═══════════════════════════════════════════
+
+- Chrome and Microsoft Edge (Manifest V3 — works on both with zero changes)
+
+═══════════════════════════════════════════
+SUPPORTED PLATFORMS
+═══════════════════════════════════════════
+
+The extension must detect and work on these four sites:
+1. ChatGPT — chat.openai.com
+2. Gemini — gemini.google.com
+3. Claude — claude.ai
+4. Kimi — kimi.ai
+
+═══════════════════════════════════════════
+FILES TO CREATE inside /extension folder
+═══════════════════════════════════════════
+
+extension/
+├── manifest.json
+├── popup.html
+├── popup.js
+├── content.js
+├── background.js
+├── icons/
+│   ├── icon16.png
+│   ├── icon48.png
+│   └── icon128.png
+└── README_extension.md
+
+═══════════════════════════════════════════
+DETAILED BEHAVIOR
+═══════════════════════════════════════════
+
+1. TOOLBAR ICON
+   - Shows Context Keeper icon in browser toolbar
+   - Clicking it opens a small popup (not a new tab, not a floating button on the page)
+   - NO floating button on the chat page — it distracts users
+
+2. POPUP (popup.html + popup.js)
+   The popup must show:
+   - Title: "Context Keeper" with orange gradient text
+   - Auto-detected platform name and icon (e.g., "ChatGPT detected" with a checkmark)
+   - If platform is not supported, show: "Open ChatGPT, Gemini, Claude, or Kimi to use this"
+   - Three category buttons the user picks from: Coding | Writing | Research
+   - One big action button: "Inject Handoff Prompt"
+   - Status message area at the bottom (shows success or error feedback)
+   - Dark theme, orange accent (#FF6B35), clean minimal design
+   - Width: 320px, no scrollbars
+
+3. PLATFORM DETECTION
+   Detect current tab URL:
+   - chat.openai.com → ChatGPT
+   - gemini.google.com → Gemini
+   - claude.ai → Claude
+   - kimi.ai → Kimi
+   - anything else → unsupported
+
+4. HANDOFF PROMPTS
+   Use these exact prompts for each category:
+
+   CODING:
+   "We are approaching the chat limit. Before we run out, please create a COMPLETE CONTEXT HANDOFF that I can paste into another LLM to continue this work seamlessly. Format it exactly like this:
+   
+   CONTEXT HANDOFF — Continuing Previous Session
+   
+   PROJECT: [what we are building]
+   TECH STACK: [languages, frameworks, tools with versions]
+   PROGRESS COMPLETED: [bullet points of what is done]
+   CURRENT CODE (VERBATIM): [full code of all relevant files, do not summarize, include filenames]
+   CURRENT PROBLEM: [exact issue we were solving, include error messages]
+   DECISIONS ALREADY MADE: [choices made and why, so the next LLM does not suggest rejected ideas]
+   NEXT STEPS: [specific next action]
+   ABOUT ME: [my experience level and how I like to work]
+   
+   INSTRUCTIONS FOR NEXT LLM: Read everything above, acknowledge you understand, then continue from NEXT STEPS without re-explaining what we covered."
+
+   WRITING:
+   "We are approaching the chat limit. Before we run out, please create a COMPLETE CONTEXT HANDOFF that I can paste into another LLM to continue this writing project seamlessly. Format it exactly like this:
+   
+   CONTEXT HANDOFF — Continuing Writing Session
+   
+   PROJECT: [what I am writing and the topic]
+   PURPOSE AND AUDIENCE: [who this is for and what it should accomplish]
+   STYLE AND TONE: [voice, tone, length target, formality, specific style choices]
+   CURRENT DRAFT (VERBATIM): [full text of the latest version, do not summarize]
+   KEY IDEAS: [main points, themes, arguments developed]
+   DECISIONS ALREADY MADE: [approaches tried and rejected, things to avoid]
+   NEXT STEPS: [what needs to happen next]
+   ABOUT ME: [my writing background and preferences]
+   
+   INSTRUCTIONS FOR NEXT LLM: Read carefully, acknowledge the context, then continue from NEXT STEPS."
+
+   RESEARCH:
+   "We are approaching the chat limit. Before we run out, please create a COMPLETE CONTEXT HANDOFF that I can paste into another LLM to continue this research seamlessly. Format it exactly like this:
+   
+   CONTEXT HANDOFF — Continuing Research Session
+   
+   TOPIC: [the core question or area being investigated]
+   GOAL: [what I am trying to learn, decide, or produce]
+   KEY FINDINGS: [main facts, insights, conclusions discovered so far]
+   SOURCES MENTIONED: [papers, websites, books, experts referenced]
+   OPEN QUESTIONS: [what is still unclear or needs more digging]
+   RULED OUT: [hypotheses or directions already dismissed and why]
+   NEXT STEPS: [specific research direction to tackle next]
+   ABOUT ME: [my background on this topic and depth of expertise desired]
+   
+   INSTRUCTIONS FOR NEXT LLM: Read carefully, acknowledge the context, then continue from NEXT STEPS."
+
+5. INJECT BEHAVIOR (content.js)
+   When the user clicks "Inject Handoff Prompt":
+   - Find the chat input box on the current platform
+   - Type the selected category prompt into it
+   - Submit it (simulate Enter key or click the send button)
+   - Send a success message back to popup to show "Prompt injected! Wait for the LLM response."
+   
+   Each platform has a different input selector — handle all four:
+   - ChatGPT: textarea or div with contenteditable in the input area
+   - Gemini: div with contenteditable role
+   - Claude: div with contenteditable
+   - Kimi: textarea or contenteditable input
+   
+   Use multiple fallback selectors for each platform in case the UI changes.
+   Simulate real typing using InputEvent and a React-compatible approach (set nativeInputValueSetter for React-controlled inputs).
+
+6. ICONS
+   Create simple programmatic PNG icons using a Canvas-based script OR provide base64-encoded placeholder icons in the manifest. The icons should be orange (#FF6B35) squares with "CK" text in white. Generate all three sizes: 16x16, 48x48, 128x128.
+
+═══════════════════════════════════════════
+MANIFEST V3 REQUIREMENTS
+═══════════════════════════════════════════
+
+- manifest_version: 3
+- permissions: activeTab, scripting, tabs
+- host_permissions: all four platform URLs
+- action: popup.html as default popup
+- content_scripts: content.js injected on all four platform URLs
+- background: background.js as service worker
+
+═══════════════════════════════════════════
+README_extension.md MUST INCLUDE
+═══════════════════════════════════════════
+
+- What the extension does
+- How to install in Chrome (chrome://extensions → Developer mode → Load unpacked → select the extension folder)
+- How to install in Edge (edge://extensions → same steps)
+- How to use it (4 steps with the popup workflow)
+- Supported platforms
+- How it connects to Context Keeper v1
+
+═══════════════════════════════════════════
+AFTER BUILDING
+═══════════════════════════════════════════
+
+1. Make sure all files are inside the extension/ subfolder
+2. Do NOT modify context_keeper.py or any existing v1 files
+3. Update the main README.md to mention v2 exists and point to extension/README_extension.md
+4. Create a git commit with message "v2: Add browser extension for one-click handoff injection"
+5. Tell me exactly how to load the extension in Chrome
+
+═══════════════════════════════════════════
+CONSTRAINTS
+═══════════════════════════════════════════
+
+- Manifest V3 only (V2 is deprecated)
+- No external dependencies, no npm, no build step — pure vanilla JS and HTML
+- Must work without any backend running (extension works standalone)
+- Clean, commented code — this is a learning project for Kade who is learning software engineering
+- Dark theme, orange accents (#FF6B35) matching Context Keeper v1 style

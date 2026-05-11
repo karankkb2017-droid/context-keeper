@@ -1,0 +1,54 @@
+Build a Streamlit desktop tool called "Context Keeper" that helps users transfer conversation context between different LLM platforms (ChatGPT, Gemini, Claude) when they hit free-tier token limits.
+
+THE CORE IDEA:
+Before a free LLM chat hits its limit, the user asks the current LLM to summarize the entire conversation into a structured "handoff prompt." That handoff can then be pasted into a fresh chat on any other LLM to continue seamlessly. This tool generates the perfect handoff-request prompts.
+
+REQUIREMENTS:
+
+1. Create these files in the current directory:
+   - context_keeper.py (main Streamlit app)
+   - requirements.txt (just: streamlit>=1.28.0)
+   - README.md (portfolio-ready documentation)
+   - .gitignore (ignore handoff_history.json, __pycache__, .venv)
+
+2. The app must have:
+   - A header titled "Context Keeper" with an orange gradient (#FF6B35 to #F7931E)
+   - A sidebar with a quick guide and a "Recent Handoffs" history viewer
+   - Two main tabs: "Generate Handoff Prompt" and "How To Use"
+   - Three category templates the user can pick from: Coding, Writing, Research
+   - For each category, a detailed prompt that asks the current LLM to produce a structured handoff with these sections: PROJECT, TECH STACK (for Coding) or STYLE/TONE (for Writing) or SOURCES (for Research), PROGRESS COMPLETED, CURRENT CODE/DRAFT/FINDINGS preserved verbatim, CURRENT PROBLEM with error messages if any, DECISIONS ALREADY MADE so the next LLM does not suggest rejected ideas, NEXT STEPS, ABOUT ME
+   - A "Copy-ready version" expander showing the prompt in a code block with Streamlit's built-in copy button
+   - A "Save to History" button that saves the handoff with timestamp and optional label to handoff_history.json
+   - A "Clear History" button in the sidebar
+   - Three link buttons that open ChatGPT (chat.openai.com), Gemini (gemini.google.com), and Claude (claude.ai) in new tabs
+
+3. Styling requirements:
+   - Dark theme aesthetic
+   - Orange gradient (#FF6B35 to #F7931E) for accents
+   - Monospace font for prompt boxes
+   - Cards for each category with a colored left border
+   - Custom-styled buttons matching the gradient
+
+4. The handoff prompt for "Coding" must explicitly instruct the LLM to preserve ALL code verbatim (not summarize it), include error messages if any, and list decisions already made so the next LLM does not suggest rejected ideas.
+
+5. History storage:
+   - Save to handoff_history.json in the same folder
+   - Keep last 50 entries
+   - Show newest first in the sidebar
+   - Each entry: timestamp, category, label, content
+
+6. README must include: project description, the problem it solves, how it works (5 steps), tech stack, quick start instructions (pip install and streamlit run), project structure, features list, and a v2/v3 roadmap (browser extension, Gemini API rescue mode).
+
+7. After creating all files:
+   - Initialize a git repo
+   - Make an initial commit with message "Initial commit: Context Keeper v1"
+   - Run "pip install -r requirements.txt" to install dependencies
+   - Tell me the exact command to launch the app
+
+CONSTRAINTS:
+- No API keys, no external services, no costs
+- Pure Python + Streamlit only
+- Must run on Windows, Mac, and Linux
+- Code must be clean, commented, and beginner-readable since this is also a learning project for me
+
+I am Kade, learning software engineering, comfortable with Python and Streamlit. Build this as a portfolio-quality project.
