@@ -354,42 +354,20 @@ function injectGemini(text, callback) {
  *   ChatGPT and Claude.ai
  */
 function injectKimi(text) {
-  const selectors = [
-    'textarea',
-    'div[contenteditable="true"]',
-    '.chat-input textarea',
-    '[placeholder]'
-  ];
-
-  let el = null;
-  for (const sel of selectors) {
-    el = document.querySelector(sel);
-    if (el) break;
-  }
-
+  const el = document.querySelector('div.chat-input-editor[contenteditable="true"]');
   if (!el) return false;
 
   el.focus();
-
-  const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
-    window.HTMLTextAreaElement.prototype, 'value'
-  )?.set || Object.getOwnPropertyDescriptor(
-    window.HTMLInputElement.prototype, 'value'
-  )?.set;
-
-  if (nativeInputValueSetter) {
-    nativeInputValueSetter.call(el, text);
-    el.dispatchEvent(new Event('input', { bubbles: true }));
-  } else {
-    el.value = text;
-    el.dispatchEvent(new InputEvent('input', { bubbles: true }));
-  }
+  el.innerHTML = '';
+  document.execCommand('selectAll', false, null);
+  document.execCommand('insertText', false, text);
+  el.dispatchEvent(new InputEvent('input', { bubbles: true }));
 
   setTimeout(() => {
-    const btn = document.querySelector('button[type="submit"]') ||
-                document.querySelector('button.send') ||
+    const btn = document.querySelector('div.chat-input button[type="submit"]') ||
+                document.querySelector('div[class*="chat-input"] button:last-child') ||
                 document.querySelector('button[aria-label*="send" i]');
-    if (btn) {
+    if (btn && !btn.disabled) {
       btn.click();
     } else {
       el.dispatchEvent(new KeyboardEvent('keydown', {
