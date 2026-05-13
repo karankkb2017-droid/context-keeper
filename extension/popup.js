@@ -62,7 +62,7 @@ INSTRUCTIONS FOR NEXT LLM: Read carefully, acknowledge the context, then continu
  */
 function detectPlatform(url) {
   if (!url) return null;
-  if (url.includes('chat.openai.com'))   return { id: 'chatgpt', name: 'ChatGPT' };
+  if (url.includes('chatgpt.com') || url.includes('chat.openai.com')) return { id: 'chatgpt', name: 'ChatGPT' };
   if (url.includes('gemini.google.com')) return { id: 'gemini',  name: 'Gemini'  };
   if (url.includes('claude.ai'))         return { id: 'claude',  name: 'Claude'  };
   if (url.includes('kimi.ai'))           return { id: 'kimi',    name: 'Kimi'    };
@@ -84,22 +84,46 @@ let activeTabId      = null;  // ID of the current browser tab
 
 // ── Initialise: detect platform from current tab URL ──────────────────────────
 
-chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-  const tab      = tabs[0];
-  activeTabId    = tab.id;
-  const platform = detectPlatform(tab.url);
-
+function applyPlatformUI(url) {
+  const platform = detectPlatform(url);
   if (platform) {
-    // Supported platform — show the main UI
     platformBadge.classList.add('detected');
     platformText.textContent = `${platform.name} detected ✓`;
     mainContent.style.display = 'block';
   } else {
-    // Not on a supported site — show the "go to a supported site" message
     platformBadge.classList.add('unsupported');
     platformText.textContent = 'No supported platform found';
     unsupportedContent.style.display = 'block';
   }
+}
+
+chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+  if (!tabs || tabs.length === 0) {
+    applyPlatformUI(null);
+    return;
+  }
+
+  const tab = tabs[0];
+  activeTabId = tab.id;
+
+  // tab.url can be undefined in Chrome MV3 even with "tabs" permission;
+  // pendingUrl is available when the tab is still loading.
+  const url = tab.url || tab.pendingUrl;
+  if (url) {
+    applyPlatformUI(url);
+    return;
+  }
+
+  // Last resort: ask the page itself for its URL via scripting.
+  // This only works for tabs covered by host_permissions but those are exactly
+  // the sites we care about.
+  chrome.scripting.executeScript(
+    { target: { tabId: tab.id }, func: () => location.href },
+    (results) => {
+      const currentUrl = results?.[0]?.result ?? null;
+      applyPlatformUI(currentUrl);
+    }
+  );
 });
 
 // ── Category button clicks ─────────────────────────────────────────────────────
