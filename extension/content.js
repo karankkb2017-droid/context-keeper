@@ -297,6 +297,81 @@ function injectClaudeAI(text, callback) {
   }, 1000);
 }
 
+// ── Kimi-specific injection (textarea or contenteditable) ─────────────────────
+
+/**
+ * Kimi may render either a plain <textarea> or a contenteditable div depending
+ * on the page state. We detect which one we found and use the appropriate path:
+ * - textarea  → React native-setter trick + input/change events
+ * - contenteditable → same ProseMirror clear-then-insertText sequence used for
+ *   ChatGPT and Claude.ai
+ */
+function injectKimi(text, callback) {
+  // STEP 1 — find the input element
+  const element =
+    document.querySelector('textarea#chat-input') ||
+    document.querySelector('textarea[placeholder]') ||
+    document.querySelector('div[contenteditable="true"][role="textbox"]') ||
+    document.querySelector('div[contenteditable="true"]') ||
+    document.querySelector('textarea');
+
+  if (!element) {
+    callback({
+      success: false,
+      error: 'Kimi input not found. Make sure the chat page is fully loaded.',
+    });
+    return;
+  }
+
+  // STEP 2 — fill based on element type
+  element.focus();
+
+  if (element.tagName === 'TEXTAREA') {
+    // React overrides the native setter, so use the prototype trick
+    const nativeSetter = Object.getOwnPropertyDescriptor(
+      HTMLTextAreaElement.prototype, 'value'
+    )?.set;
+    if (nativeSetter) {
+      nativeSetter.call(element, text);
+    } else {
+      element.value = text;
+    }
+    element.dispatchEvent(new InputEvent('input', { bubbles: true }));
+    element.dispatchEvent(new Event('change', { bubbles: true }));
+  } else {
+    // contenteditable — ProseMirror-compatible approach
+    element.innerHTML = '';
+    element.dispatchEvent(new InputEvent('input', { bubbles: true }));
+    document.execCommand('insertText', false, text);
+
+    setTimeout(() => {
+      element.dispatchEvent(new InputEvent('input', { bubbles: true }));
+      element.dispatchEvent(new Event('change', { bubbles: true }));
+    }, 500);
+  }
+
+  // STEP 3 — submit after 1000 ms
+  setTimeout(() => {
+    const sendBtn =
+      document.querySelector('button[aria-label="Send"]') ||
+      document.querySelector('button[class*="send"]') ||
+      document.querySelector('button[data-testid="send-btn"]') ||
+      document.querySelector('button[type="submit"]');
+    if (sendBtn && !sendBtn.disabled) {
+      sendBtn.click();
+    } else {
+      element.dispatchEvent(new KeyboardEvent('keydown', {
+        key: 'Enter',
+        code: 'Enter',
+        keyCode: 13,
+        bubbles: true,
+        cancelable: true,
+      }));
+    }
+    callback({ success: true });
+  }, 1000);
+}
+
 // ── Main injection function ────────────────────────────────────────────────────
 
 /**
@@ -322,6 +397,12 @@ function injectPrompt(promptText, callback) {
   // Claude.ai requires its own injection path due to React-controlled ProseMirror
   if (platform === 'claude') {
     injectClaudeAI(promptText, callback);
+    return;
+  }
+
+  // Kimi requires its own injection path to handle textarea vs contenteditable
+  if (platform === 'kimi') {
+    injectKimi(promptText, callback);
     return;
   }
 
