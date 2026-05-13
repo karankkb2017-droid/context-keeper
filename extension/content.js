@@ -297,6 +297,63 @@ function injectClaudeAI(text, callback) {
   }, 1000);
 }
 
+// ── Gemini-specific injection (Quill editor inside rich-textarea) ─────────────
+
+/**
+ * Gemini wraps a Quill contenteditable div inside a <rich-textarea> web
+ * component. Quill listens to the browser editing pipeline, so the same
+ * clear-then-insertText sequence used for ProseMirror works here too.
+ */
+function injectGemini(text, callback) {
+  // STEP 1 — find the input element
+  const element =
+    document.querySelector('div.ql-editor[contenteditable="true"]') ||
+    document.querySelector('rich-textarea > div[contenteditable="true"]') ||
+    document.querySelector('div[contenteditable="true"][role="textbox"]') ||
+    document.querySelector('div[contenteditable="true"]');
+
+  if (!element) {
+    callback({
+      success: false,
+      error: 'Gemini input not found. Make sure the chat page is fully loaded.',
+    });
+    return;
+  }
+
+  // STEP 2 — clear and set text via Quill-compatible approach
+  element.focus();
+  element.innerHTML = '';
+  element.dispatchEvent(new InputEvent('input', { bubbles: true }));
+
+  document.execCommand('insertText', false, text);
+
+  setTimeout(() => {
+    element.dispatchEvent(new InputEvent('input', { bubbles: true }));
+    element.dispatchEvent(new Event('change', { bubbles: true }));
+  }, 500);
+
+  // STEP 3 — submit after 1000 ms
+  setTimeout(() => {
+    const sendBtn =
+      document.querySelector('button[aria-label="Send message"]') ||
+      document.querySelector('button.send-button') ||
+      document.querySelector('button[jsname="WRWHed"]') ||
+      document.querySelector('button[data-test-id="send-button"]');
+    if (sendBtn && !sendBtn.disabled) {
+      sendBtn.click();
+    } else {
+      element.dispatchEvent(new KeyboardEvent('keydown', {
+        key: 'Enter',
+        code: 'Enter',
+        keyCode: 13,
+        bubbles: true,
+        cancelable: true,
+      }));
+    }
+    callback({ success: true });
+  }, 1000);
+}
+
 // ── Kimi-specific injection (textarea or contenteditable) ─────────────────────
 
 /**
@@ -388,23 +445,10 @@ function injectPrompt(promptText, callback) {
     return;
   }
 
-  // ChatGPT requires its own injection path due to React-controlled ProseMirror
-  if (platform === 'chatgpt') {
-    injectChatGPT(promptText, callback);
-    return;
-  }
-
-  // Claude.ai requires its own injection path due to React-controlled ProseMirror
-  if (platform === 'claude') {
-    injectClaudeAI(promptText, callback);
-    return;
-  }
-
-  // Kimi requires its own injection path to handle textarea vs contenteditable
-  if (platform === 'kimi') {
-    injectKimi(promptText, callback);
-    return;
-  }
+  if (platform === 'chatgpt') { injectChatGPT(promptText, callback);  return; }
+  if (platform === 'gemini')  { injectGemini(promptText, callback);   return; }
+  if (platform === 'claude')  { injectClaudeAI(promptText, callback); return; }
+  if (platform === 'kimi')    { injectKimi(promptText, callback);     return; }
 
   const inputEl = findInput(platform);
   if (!inputEl) {
