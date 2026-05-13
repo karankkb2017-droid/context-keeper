@@ -30,7 +30,8 @@
     "https://chat.openai.com/*",
     "https://gemini.google.com/*",
     "https://claude.ai/*",
-    "https://kimi.ai/*"
+    "https://kimi.ai/*",
+    "https://www.kimi.ai/*"
   ],
 
   "content_scripts": [
@@ -40,7 +41,8 @@
         "https://chat.openai.com/*",
         "https://gemini.google.com/*",
         "https://claude.ai/*",
-        "https://kimi.ai/*"
+        "https://kimi.ai/*",
+        "https://www.kimi.ai/*"
       ],
       "js": ["content.js"],
       "run_at": "document_idle"

@@ -67,7 +67,7 @@ const SEND_SELECTORS = {
 
 function getPlatform() {
   const host = window.location.hostname;
-  if (host.includes('openai.com'))  return 'chatgpt';
+  if (host.includes('chatgpt.com') || host.includes('openai.com')) return 'chatgpt';
   if (host.includes('google.com'))  return 'gemini';
   if (host.includes('claude.ai'))   return 'claude';
   if (host.includes('kimi.ai'))     return 'kimi';
@@ -196,49 +196,39 @@ function pressEnter(el) {
  * insertText via execCommand, then re-fire events after a short delay before
  * submitting so React has time to register the content.
  */
-function injectChatGPT(text, callback) {
-  // STEP 1 — find the input element
-  const element =
-    document.querySelector('#prompt-textarea') ||
-    document.querySelector('div[contenteditable="true"].ProseMirror') ||
-    document.querySelector('div[contenteditable="true"]');
+function injectChatGPT(text) {
+  const selectors = [
+    '#prompt-textarea',
+    'div[contenteditable="true"].ProseMirror',
+    'div[contenteditable="true"]'
+  ];
 
-  if (!element) {
-    callback({
-      success: false,
-      error: 'ChatGPT input not found. Make sure the chat page is fully loaded.',
-    });
-    return;
+  let el = null;
+  for (const sel of selectors) {
+    el = document.querySelector(sel);
+    if (el) break;
   }
 
-  // STEP 2 — clear and set text via ProseMirror-compatible approach
-  element.focus();
-  element.innerHTML = '';
-  element.dispatchEvent(new InputEvent('input', { bubbles: true }));
+  if (!el) return false;
 
+  el.focus();
+  el.innerHTML = '';
+  document.execCommand('selectAll', false, null);
   document.execCommand('insertText', false, text);
+  el.dispatchEvent(new InputEvent('input', { bubbles: true }));
 
   setTimeout(() => {
-    element.dispatchEvent(new InputEvent('input', { bubbles: true }));
-    element.dispatchEvent(new Event('change', { bubbles: true }));
-  }, 500);
-
-  // STEP 3 — submit after 1000 ms
-  setTimeout(() => {
-    const sendBtn = document.querySelector('button[data-testid="send-button"]');
-    if (sendBtn && !sendBtn.disabled) {
-      sendBtn.click();
+    const btn = document.querySelector('button[data-testid="send-button"]');
+    if (btn && !btn.disabled) {
+      btn.click();
     } else {
-      element.dispatchEvent(new KeyboardEvent('keydown', {
-        key: 'Enter',
-        code: 'Enter',
-        keyCode: 13,
-        bubbles: true,
-        cancelable: true,
+      el.dispatchEvent(new KeyboardEvent('keydown', {
+        key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true, cancelable: true
       }));
     }
-    callback({ success: true });
-  }, 1000);
+  }, 800);
+
+  return true;
 }
 
 // ── Claude.ai-specific injection (React-controlled ProseMirror) ───────────────
@@ -363,70 +353,52 @@ function injectGemini(text, callback) {
  * - contenteditable → same ProseMirror clear-then-insertText sequence used for
  *   ChatGPT and Claude.ai
  */
-function injectKimi(text, callback) {
-  // STEP 1 — find the input element
-  const element =
-    document.querySelector('textarea#chat-input') ||
-    document.querySelector('textarea[placeholder]') ||
-    document.querySelector('div[contenteditable="true"][role="textbox"]') ||
-    document.querySelector('div[contenteditable="true"]') ||
-    document.querySelector('textarea');
+function injectKimi(text) {
+  const selectors = [
+    'textarea',
+    'div[contenteditable="true"]',
+    '.chat-input textarea',
+    '[placeholder]'
+  ];
 
-  if (!element) {
-    callback({
-      success: false,
-      error: 'Kimi input not found. Make sure the chat page is fully loaded.',
-    });
-    return;
+  let el = null;
+  for (const sel of selectors) {
+    el = document.querySelector(sel);
+    if (el) break;
   }
 
-  // STEP 2 — fill based on element type
-  element.focus();
+  if (!el) return false;
 
-  if (element.tagName === 'TEXTAREA') {
-    // React overrides the native setter, so use the prototype trick
-    const nativeSetter = Object.getOwnPropertyDescriptor(
-      HTMLTextAreaElement.prototype, 'value'
-    )?.set;
-    if (nativeSetter) {
-      nativeSetter.call(element, text);
-    } else {
-      element.value = text;
-    }
-    element.dispatchEvent(new InputEvent('input', { bubbles: true }));
-    element.dispatchEvent(new Event('change', { bubbles: true }));
+  el.focus();
+
+  const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
+    window.HTMLTextAreaElement.prototype, 'value'
+  )?.set || Object.getOwnPropertyDescriptor(
+    window.HTMLInputElement.prototype, 'value'
+  )?.set;
+
+  if (nativeInputValueSetter) {
+    nativeInputValueSetter.call(el, text);
+    el.dispatchEvent(new Event('input', { bubbles: true }));
   } else {
-    // contenteditable — ProseMirror-compatible approach
-    element.innerHTML = '';
-    element.dispatchEvent(new InputEvent('input', { bubbles: true }));
-    document.execCommand('insertText', false, text);
-
-    setTimeout(() => {
-      element.dispatchEvent(new InputEvent('input', { bubbles: true }));
-      element.dispatchEvent(new Event('change', { bubbles: true }));
-    }, 500);
+    el.value = text;
+    el.dispatchEvent(new InputEvent('input', { bubbles: true }));
   }
 
-  // STEP 3 — submit after 1000 ms
   setTimeout(() => {
-    const sendBtn =
-      document.querySelector('button[aria-label="Send"]') ||
-      document.querySelector('button[class*="send"]') ||
-      document.querySelector('button[data-testid="send-btn"]') ||
-      document.querySelector('button[type="submit"]');
-    if (sendBtn && !sendBtn.disabled) {
-      sendBtn.click();
+    const btn = document.querySelector('button[type="submit"]') ||
+                document.querySelector('button.send') ||
+                document.querySelector('button[aria-label*="send" i]');
+    if (btn) {
+      btn.click();
     } else {
-      element.dispatchEvent(new KeyboardEvent('keydown', {
-        key: 'Enter',
-        code: 'Enter',
-        keyCode: 13,
-        bubbles: true,
-        cancelable: true,
+      el.dispatchEvent(new KeyboardEvent('keydown', {
+        key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true, cancelable: true
       }));
     }
-    callback({ success: true });
-  }, 1000);
+  }, 800);
+
+  return true;
 }
 
 // ── Main injection function ────────────────────────────────────────────────────
@@ -445,10 +417,18 @@ function injectPrompt(promptText, callback) {
     return;
   }
 
-  if (platform === 'chatgpt') { injectChatGPT(promptText, callback);  return; }
+  if (platform === 'chatgpt') {
+    const ok = injectChatGPT(promptText);
+    callback({ success: ok, error: ok ? undefined : 'ChatGPT input not found. Make sure the chat page is fully loaded.' });
+    return;
+  }
   if (platform === 'gemini')  { injectGemini(promptText, callback);   return; }
   if (platform === 'claude')  { injectClaudeAI(promptText, callback); return; }
-  if (platform === 'kimi')    { injectKimi(promptText, callback);     return; }
+  if (platform === 'kimi') {
+    const ok = injectKimi(promptText);
+    callback({ success: ok, error: ok ? undefined : 'Kimi input not found. Make sure the chat page is fully loaded.' });
+    return;
+  }
 
   const inputEl = findInput(platform);
   if (!inputEl) {
