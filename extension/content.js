@@ -187,6 +187,60 @@ function pressEnter(el) {
   el.dispatchEvent(new KeyboardEvent('keyup',    opts));
 }
 
+// ── ChatGPT-specific injection (React-controlled ProseMirror) ─────────────────
+
+/**
+ * ChatGPT uses a React-controlled ProseMirror contenteditable div.
+ * Normal value setting and execCommand do not work reliably on their own.
+ * This function uses a specific sequence: clear innerHTML, fire input event,
+ * insertText via execCommand, then re-fire events after a short delay before
+ * submitting so React has time to register the content.
+ */
+function injectChatGPT(text, callback) {
+  // STEP 1 — find the input element
+  const element =
+    document.querySelector('#prompt-textarea') ||
+    document.querySelector('div[contenteditable="true"].ProseMirror') ||
+    document.querySelector('div[contenteditable="true"]');
+
+  if (!element) {
+    callback({
+      success: false,
+      error: 'ChatGPT input not found. Make sure the chat page is fully loaded.',
+    });
+    return;
+  }
+
+  // STEP 2 — clear and set text via ProseMirror-compatible approach
+  element.focus();
+  element.innerHTML = '';
+  element.dispatchEvent(new InputEvent('input', { bubbles: true }));
+
+  document.execCommand('insertText', false, text);
+
+  setTimeout(() => {
+    element.dispatchEvent(new InputEvent('input', { bubbles: true }));
+    element.dispatchEvent(new Event('change', { bubbles: true }));
+  }, 500);
+
+  // STEP 3 — submit after 1000 ms
+  setTimeout(() => {
+    const sendBtn = document.querySelector('button[data-testid="send-button"]');
+    if (sendBtn && !sendBtn.disabled) {
+      sendBtn.click();
+    } else {
+      element.dispatchEvent(new KeyboardEvent('keydown', {
+        key: 'Enter',
+        code: 'Enter',
+        keyCode: 13,
+        bubbles: true,
+        cancelable: true,
+      }));
+    }
+    callback({ success: true });
+  }, 1000);
+}
+
 // ── Main injection function ────────────────────────────────────────────────────
 
 /**
@@ -200,6 +254,12 @@ function injectPrompt(promptText, callback) {
   const platform = getPlatform();
   if (!platform) {
     callback({ success: false, error: 'Unsupported platform.' });
+    return;
+  }
+
+  // ChatGPT requires its own injection path due to React-controlled ProseMirror
+  if (platform === 'chatgpt') {
+    injectChatGPT(promptText, callback);
     return;
   }
 
