@@ -241,6 +241,62 @@ function injectChatGPT(text, callback) {
   }, 1000);
 }
 
+// ── Claude.ai-specific injection (React-controlled ProseMirror) ───────────────
+
+/**
+ * Claude.ai uses a React-controlled ProseMirror contenteditable div,
+ * identical in structure to ChatGPT's editor. The same clear-then-insertText
+ * sequence is required for React to register the new content.
+ */
+function injectClaudeAI(text, callback) {
+  // STEP 1 — find the input element
+  const element =
+    document.querySelector('div[contenteditable="true"].ProseMirror') ||
+    document.querySelector('div.ProseMirror[contenteditable="true"]') ||
+    document.querySelector('fieldset div[contenteditable="true"]') ||
+    document.querySelector('div[contenteditable="true"]');
+
+  if (!element) {
+    callback({
+      success: false,
+      error: 'Claude input not found. Make sure the chat page is fully loaded.',
+    });
+    return;
+  }
+
+  // STEP 2 — clear and set text via ProseMirror-compatible approach
+  element.focus();
+  element.innerHTML = '';
+  element.dispatchEvent(new InputEvent('input', { bubbles: true }));
+
+  document.execCommand('insertText', false, text);
+
+  setTimeout(() => {
+    element.dispatchEvent(new InputEvent('input', { bubbles: true }));
+    element.dispatchEvent(new Event('change', { bubbles: true }));
+  }, 500);
+
+  // STEP 3 — submit after 1000 ms
+  setTimeout(() => {
+    const sendBtn =
+      document.querySelector('button[aria-label="Send message"]') ||
+      document.querySelector('button[aria-label="Send Message"]') ||
+      document.querySelector('button[type="submit"]');
+    if (sendBtn && !sendBtn.disabled) {
+      sendBtn.click();
+    } else {
+      element.dispatchEvent(new KeyboardEvent('keydown', {
+        key: 'Enter',
+        code: 'Enter',
+        keyCode: 13,
+        bubbles: true,
+        cancelable: true,
+      }));
+    }
+    callback({ success: true });
+  }, 1000);
+}
+
 // ── Main injection function ────────────────────────────────────────────────────
 
 /**
@@ -260,6 +316,12 @@ function injectPrompt(promptText, callback) {
   // ChatGPT requires its own injection path due to React-controlled ProseMirror
   if (platform === 'chatgpt') {
     injectChatGPT(promptText, callback);
+    return;
+  }
+
+  // Claude.ai requires its own injection path due to React-controlled ProseMirror
+  if (platform === 'claude') {
+    injectClaudeAI(promptText, callback);
     return;
   }
 
