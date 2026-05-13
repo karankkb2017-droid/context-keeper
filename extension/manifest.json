@@ -31,7 +31,9 @@
     "https://gemini.google.com/*",
     "https://claude.ai/*",
     "https://kimi.ai/*",
-    "https://www.kimi.ai/*"
+    "https://www.kimi.ai/*",
+    "https://kimi.com/*",
+    "https://www.kimi.com/*"
   ],
 
   "content_scripts": [
@@ -42,7 +44,9 @@
         "https://gemini.google.com/*",
         "https://claude.ai/*",
         "https://kimi.ai/*",
-        "https://www.kimi.ai/*"
+        "https://www.kimi.ai/*",
+        "https://kimi.com/*",
+        "https://www.kimi.com/*"
       ],
       "js": ["content.js"],
       "run_at": "document_idle"

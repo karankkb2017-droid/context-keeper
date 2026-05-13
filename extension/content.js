@@ -70,7 +70,7 @@ function getPlatform() {
   if (host.includes('chatgpt.com') || host.includes('openai.com')) return 'chatgpt';
   if (host.includes('google.com'))  return 'gemini';
   if (host.includes('claude.ai'))   return 'claude';
-  if (host.includes('kimi.ai'))     return 'kimi';
+  if (host.includes('kimi.ai') || host.includes('kimi.com')) return 'kimi';
   return null;
 }
 

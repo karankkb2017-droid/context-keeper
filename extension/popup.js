@@ -65,7 +65,7 @@ function detectPlatform(url) {
   if (url.includes('chatgpt.com') || url.includes('chat.openai.com')) return { id: 'chatgpt', name: 'ChatGPT' };
   if (url.includes('gemini.google.com')) return { id: 'gemini',  name: 'Gemini'  };
   if (url.includes('claude.ai'))         return { id: 'claude',  name: 'Claude'  };
-  if (url.includes('kimi.ai'))           return { id: 'kimi',    name: 'Kimi'    };
+  if (url.includes('kimi.ai') || url.includes('kimi.com')) return { id: 'kimi', name: 'Kimi' };
   return null;
 }
 
